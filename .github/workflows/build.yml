@@ -25,8 +25,8 @@ jobs:
         run: node tools/rules.test.js
       - name: Conferir o motor de regras (partida IA x IA)
         run: |
-          global.localStorage={getItem(){return null},setItem(){}};
           node -e "
+          global.localStorage={getItem(){return null},setItem(){}};
           const E=require('./js/engine.js');global.CombatEngine=E;global.window={};require('./js/cards.js');
           for(let g=0;g<50;g++){const S=E.create({seed:g+1,decks:{p:window.CARDS.DECK,e:window.CARDS.DECK}});E.start(S);
            let n=0;while(!S.winner&&n++<3000){const r=E.dispatch(S,E.aiChoose(S,S.active));if(!r.ok)E.dispatch(S,{type:'END_TURN',side:S.active})}
