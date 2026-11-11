@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SCP Remake — Duelo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700;900&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <img id="table" src="assets/table.webp" alt="">
+  <div id="slots"></div>
+  <img class="pile" id="deck-e" src="assets/deck.webp" alt=""><div class="pilen" id="deckn-e"></div>
+  <img class="pile" id="deck-p" src="assets/deck.webp" alt=""><div class="pilen" id="deckn-p"></div>
+  <div class="hud" id="hud-e"></div>
+  <div class="hud" id="hud-p"></div>
+  <div id="cards"></div>
+  <svg id="arrow"><defs><marker id="ah" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#ff9a2e"/></marker></defs><path d="" marker-end="url(#ah)"/></svg>
+  <button id="end" class="btn">ENCERRAR<br>TURNO</button>
+  <button id="proto" class="btn small">PROTOCOLO DE<br>EMERGÊNCIA</button>
+  <div id="preview"></div>
+  <div id="fx"></div>
+  <div id="banner"></div>
+  <div id="toast"></div>
+  <div id="modal"></div>
+</div></div>
+<script src="js/engine.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/duel.js"></script>
+</body>
+</html>
