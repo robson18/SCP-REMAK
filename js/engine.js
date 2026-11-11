@@ -122,6 +122,13 @@ const KWNEW={
 const tokName=f=>f==='T088'?'Reptiliano':'Ficha 074-1';
 // k: {txt(e) -> linha da carta, terms: palavras do glossário usadas}
 const KW={
+ provocar:{txt:()=>'Provocar',terms:['Provocar']},
+ investida:{txt:()=>'Investida',terms:['Investida']},
+ escudo:{txt:()=>'Escudo Divino',terms:['Escudo Divino']},
+ venenoso:{txt:()=>'Venenoso',terms:['Venenoso']},
+ furia_vento:{txt:()=>'Fúria dos Ventos',terms:['Fúria dos Ventos']},
+ entra_cura_todos:{txt:e=>`Grito de Guerra: Curar ${e.n} todos os aliados`,terms:['Grito de Guerra']},
+ us_dano:{txt:e=>`Último Suspiro: ${e.n} de dano a todos os inimigos`,terms:['Último Suspiro']},
  abate_atk:{txt:e=>`Abate: +${e.n} ATQ`,terms:['Abate']},
  abate_cura:{txt:e=>`Abate: Curar ${e.n} (a si mesma)`,sh:e=>`Abate: Curar ${e.n}`,terms:['Abate','Curar']},
  abate_invoca:{txt:e=>`Abate: Invocar ${tokName(e.f)} 2/2`,sh:()=>'Abate: Invocar 2/2',terms:['Abate','Invocar']},
@@ -151,6 +158,14 @@ Object.assign(KW,KWNEW);
 for(const k in DEFS)for(const e of DEFS[k].kw||[]){if(!KW[e.k])throw new Error('palavra-chave desconhecida '+e.k+' em '+k);if(KWNEW[e.k]&&e.k!=='silenciar'&&!(Number.isInteger(e.n)&&e.n>=0))throw new Error('X inválido '+e.k+' em '+k)}
 // texto da carta: nome da habilidade (sem número) + resumo com os valores reais desta carta
 const KWD={
+ provocar:['Provocar',()=>'Os inimigos precisam atacar esta carta primeiro.'],
+ investida:['Investida',()=>'Pode atacar no turno em que entra.'],
+ escudo:['Escudo Divino',()=>'O primeiro dano que receberia é anulado.'],
+ venenoso:['Venenoso',()=>'Destrói qualquer carta que ferir em combate.'],
+ furia_vento:['Fúria dos Ventos',()=>'Pode atacar duas vezes por turno.'],
+ entra_cura_todos:['Grito de Guerra',n=>`Ao entrar, cura ${n} de Vida de todos os seus aliados.`],
+ us_dano:['Último Suspiro',n=>`Ao ser destruída, causa ${n} de dano a todos os inimigos, inclusive ao Diretor.`],
+ imortal:['Imortal',()=>'Na primeira vez que seria destruída, sobrevive com 1 de Vida.'],
  regeneracao:['Regeneração',n=>`No fim do seu turno, recupera ${n} de Vida.`],
  protecao:['Proteção',n=>`Recebe ${n} de dano a menos de cada ataque ou efeito.`],
  cura:['Cura',n=>`Ao entrar, recupera ${n} de Vida do aliado mais ferido.`],
@@ -211,7 +226,7 @@ function start(S){S.evBuf=[];const sec=other(S.first);for(const s of['p','e'])fo
  emit(S,'MATCH_STARTED',{first:S.first});beginTurn(S,S.first);return flush(S)}
 
 /* ---------- eventos / snapshots ---------- */
-function snap(S){const cp=u=>u&&{uid:u.uid,def:u.def,atk:atkOf(u),batk:u.atk,hp:u.hp,maxHp:u.maxHp,sick:u.sick,owner:u.owner,statuses:u.statuses.map(x=>Object.assign({},x)),bonus:Object.assign({},u.bonus),copied:u.copied||null,infected:!!u.infected,undyingUsed:!!u.undyingUsed,attacked:!!u.attacked,age:u.age||0};
+function snap(S){const cp=u=>u&&{uid:u.uid,def:u.def,atk:atkOf(u),batk:u.atk,hp:u.hp,maxHp:u.maxHp,sick:u.sick,owner:u.owner,statuses:u.statuses.map(x=>Object.assign({},x)),bonus:Object.assign({},u.bonus),copied:u.copied||null,infected:!!u.infected,undyingUsed:!!u.undyingUsed,attacked:!!u.attacked,shield:!!u.shield,age:u.age||0};
  const sd=s=>{const x=S.sides[s];return{hp:x.hp,pc:x.pc,pcMax:x.pcMax,rr:x.rr,hand:x.hand.map(c=>({uid:c.uid,def:c.def})),deckN:x.deck.length,discardN:x.discard.length,
   field:x.field.map(cp),pocket:x.pocket.map(p=>({unit:cp(p.unit),by:p.by,ticks:p.ticks,slot:p.slot})),emUsed:x.emUsed,fatigue:x.fatigue,turns:x.turns}};
  return{turn:S.turn,active:S.active,phase:S.phase,winner:S.winner,scry:S.scryOffer?S.scryOffer.cards.map(c=>({uid:c.uid,def:c.def})):null,sides:{p:sd('p'),e:sd('e')}}}
@@ -221,7 +236,7 @@ function flush(S){const b=S.evBuf||[];S.evBuf=[];return b}
 /* ---------- utilidades ---------- */
 const unitsOf=(S,s)=>S.sides[s].field.filter(Boolean);
 function findUnit(S,uid){for(const s of['p','e']){const i=S.sides[s].field.findIndex(u=>u&&u.uid===uid);if(i>=0)return{unit:S.sides[s].field[i],side:s,slot:i}}return null}
-function mkUnit(S,card,owner){const d=DEFS[card.def];return{uid:card.uid,def:card.def,atk:d.atk,hp:d.hp,maxHp:d.hp,sick:true,owner,statuses:[],bonus:{},age:0,attacked:false}}
+function mkUnit(S,card,owner){const d=DEFS[card.def];return{uid:card.uid,def:card.def,atk:d.atk,hp:d.hp,maxHp:d.hp,sick:true,owner,statuses:[],bonus:{},age:0,attacked:false,shield:!!kwE(card.def,'escudo')}}
 const isBlocked=(S,u)=>{const t=S.sides[u.owner].turns;return u.statuses.some(s=>(s.type==='uncontrolled'&&t>=s.fromTurn&&t<=s.toTurn)||(s.type==='graffiti'&&s.hold))};
 
 // ataque efetivo: Enfraquecer (temporário) e Fúria X (com metade da Vida ou menos)
@@ -229,11 +244,13 @@ function atkOf(u){let a=u.atk;for(const s of u.statuses)if(s.type==='weak')a-=s.
 /* ---------- vida do jogador / destruição ---------- */
 function damagePlayer(S,side,n,reason){if(S.winner||n<=0)return;const sd=S.sides[side];sd.hp=Math.max(0,sd.hp-n);emit(S,'PLAYER_DAMAGED',{side,amount:n,hp:sd.hp,reason});if(sd.hp===0)finish(S,other(side))}
 function finish(S,winner){if(S.winner)return;S.winner=winner;S.phase='over';emit(S,'MATCH_FINISHED',{winner})}
-function destroyUnit(S,u){const sd=S.sides[u.owner],i=sd.field.indexOf(u);if(i<0)return;sd.field[i]=null;if(!DEFS[u.def].token&&!u.infected)sd.discard.push({uid:u.uid,def:u.def});emit(S,'UNIT_DESTROYED',{uid:u.uid,def:u.def,side:u.owner,slot:i});purgeSilence(S,u.uid)}
+function destroyUnit(S,u){const sd=S.sides[u.owner],i=sd.field.indexOf(u);if(i<0)return;sd.field[i]=null;if(!DEFS[u.def].token&&!u.infected)sd.discard.push({uid:u.uid,def:u.def});emit(S,'UNIT_DESTROYED',{uid:u.uid,def:u.def,side:u.owner,slot:i});purgeSilence(S,u.uid)
+ if(hasAb(u,'us_dano')&&!S.winner){const n=kwN(u,'us_dano',1),f=other(u.owner);emit(S,'ABILITY',{side:u.owner,uid:u.uid,name:'Último Suspiro'});
+  for(const x of S.sides[f].field.slice())if(x&&S.sides[f].field.includes(x))damageUnit(S,x,n,'deathrattle');damagePlayer(S,f,n,'deathrattle')}}
 // silêncio: 158 dura enquanto ele estiver em campo e ativo; 072 dura até o início do próximo turno de quem jogou
 function purgeSilence(S,src){for(const s of['p','e'])for(const x of S.sides[s].field){if(!x)continue;const n=x.statuses.length;x.statuses=x.statuses.filter(t=>!(t.type==='silence'&&t.src===src&&!t.round));
  if(x.statuses.length!==n&&!silenced(x))emit(S,'STATUS_REMOVED',{side:x.owner,uid:x.uid,status:'silence'})}}
-function applySilence(S,u,src,by,round){const was=silenced(u);u.statuses=u.statuses.filter(t=>t.type!=='fury');u.statuses.push({type:'silence',src,by,round:!!round});if(u.copied){u.copied=null}
+function applySilence(S,u,src,by,round){const was=silenced(u);u.shield=false;u.statuses=u.statuses.filter(t=>t.type!=='fury');u.statuses.push({type:'silence',src,by,round:!!round});if(u.copied){u.copied=null}
  emit(S,'STATUS_APPLIED',{side:u.owner,uid:u.uid,status:'silence',round:!!round});if(!was&&kwE(u.def,'entra_silenciar_aura'))purgeSilence(S,u.uid)}
 
 const storeActive=(S,side,except)=>S.sides[side].field.some(x=>x&&x!==except&&hasAb(x,'guardiao'));
@@ -242,7 +259,8 @@ function guardOf(S,u){if(u.hp>0)return null;if(hasAb(u,'indestrutivel')&&u.lastR
  if(hasAb(u,'imortal')&&!u.undyingUsed){u.undyingUsed=true;return 'undying'}return null}
 function checkDeath(S,u){const g=guardOf(S,u);if(g){u.hp=1;emit(S,'UNIT_PROTECTED',{uid:u.uid,side:u.owner,by:g});return false}
  if(u.hp<=0){destroyUnit(S,u);return true}return false}
-function damageUnit(S,u,n,reason){let half=false;if(hasAb(u,'blindado')&&n>0){n=Math.floor(n/2);half=true}
+function damageUnit(S,u,n,reason){if(u.shield&&n>0&&!silenced(u)){u.shield=false;u.lastDmg=0;emit(S,'SHIELD_BROKEN',{uid:u.uid,side:u.owner});return false}
+ let half=false;if(hasAb(u,'blindado')&&n>0){n=Math.floor(n/2);half=true}
  if(hasAb(u,'protecao')&&n>0){const p=kwN(u,'protecao',0);if(p){n=Math.max(0,n-p);half=true}}u.lastDmg=n;
  u.lastReason=reason;u.hp-=n;emit(S,'UNIT_DAMAGED',{uid:u.uid,side:u.owner,amount:n,hp:Math.max(0,u.hp),reason,half});
  return checkDeath(S,u)}
@@ -258,6 +276,7 @@ function createToken(S,side,src,reason,def,infected){def=def||'T074';const sd=S.
 function drain(S,u){if(!hasAb(u,'drenar')||u.hp>=u.maxHp)return;const h0=u.hp;u.hp=Math.min(u.maxHp,u.hp+kwN(u,'drenar',0));if(u.hp!==h0)emit(S,'UNIT_BUFFED',{uid:u.uid,side:u.owner,hp:u.hp,heal:u.hp-h0,reason:'drain'})}
 // depois de um golpe de combate que causou dano: Drenar, Veneno, Retaliação (dano de Retaliação não é de combate: sem recursão)
 function afterHit(S,u,t,died,me,foe){if(S.winner)return;drain(S,u);
+ if(!died&&foe.field.includes(t)&&hasAb(u,'venenoso')){emit(S,'ABILITY',{side:u.owner,uid:u.uid,name:'Venenoso',target:t.uid});t.hp=0;t.lastReason='poisonous';if(checkDeath(S,t))return}
  if(!died&&foe.field.includes(t)&&hasAb(u,'veneno')){const n=kwN(u,'veneno',0),st=t.statuses.find(x=>x.type==='poison');const v=Math.min(RULES.POISON_CAP,(st?st.n:0)+n);
   if(st)st.n=v;else t.statuses.push({type:'poison',n:v});emit(S,'STATUS_APPLIED',{side:t.owner,uid:t.uid,status:'poison',n:v})}
  if(!died&&foe.field.includes(t)&&me.field.includes(u)&&hasAb(t,'retaliacao')){const r=kwN(t,'retaliacao',0);if(r){emit(S,'ABILITY',{side:t.owner,uid:t.uid,name:'Retaliação '+r,target:u.uid});damageUnit(S,u,r,'retaliate')}}}
@@ -329,7 +348,7 @@ function beginTurn(S,side){S.turn++;S.active=side;const sd=S.sides[side];sd.turn
  emit(S,'TURN_STARTED',{side,pcMax:sd.pcMax});
  for(const o of['p','e'])for(const x of S.sides[o].field){if(!x)continue;const n=x.statuses.length;x.statuses=x.statuses.filter(t=>!(t.type==='silence'&&t.round&&t.by===side));if(x.statuses.length!==n&&!silenced(x))emit(S,'STATUS_REMOVED',{side:o,uid:x.uid,status:'silence'})}
  for(const o of['p','e'])for(const x of S.sides[o].field){if(!x)continue;const n=x.statuses.length;x.statuses=x.statuses.filter(t=>!(t.type==='weak'&&t.by===side));if(x.statuses.length!==n)emit(S,'STATUS_REMOVED',{side:o,uid:x.uid,status:'weak'})}
- sd.field.forEach(u=>{if(u){u.sick=false;u.attacked=false;u.age=(u.age||0)+1}});
+ sd.field.forEach(u=>{if(u){u.sick=false;u.attacked=false;u.atkCount=0;u.age=(u.age||0)+1}});
  for(const o of['p','e'])for(const x of S.sides[o].field)if(x&&o!==side)x.statuses.forEach(st=>{if(st.type==='graffiti'&&st.by!==side)st.hold=false});
  keterStart(S,side);if(S.winner)return;
  tickPocket(S,side);
@@ -387,14 +406,18 @@ function grafiteEnd(S,side){const sd=S.sides[side],foe=S.sides[other(side)];
   for(const x of foe.field)if(x&&!x.statuses.some(st=>st.type==='graffiti')&&(!t||atkOf(x)*2+x.hp>atkOf(t)*2+t.hp))t=x;
   if(t){t.statuses.push({type:'graffiti',by:side,hold:true});emit(S,'ABILITY',{side,uid:u.uid,name:'Atração do Grafite',target:t.uid});emit(S,'STATUS_APPLIED',{side:t.owner,uid:t.uid,status:'graffiti'})}}}
 /* ---------- ataque escolhido pelo jogador (estilo Hearthstone) ---------- */
-const canFace=(S,side,uid)=>{const f=findUnit(S,uid);return!!f&&!S.sides[other(side)].field[f.slot]};
+const taunts=(S,side)=>S.sides[other(side)].field.filter(x=>x&&hasAb(x,'provocar'));
+const canFace=(S,side,uid)=>{const f=findUnit(S,uid);return!!f&&!S.sides[other(side)].field[f.slot]&&!taunts(S,side).length};
+// alvos válidos de um ataque: com Provocar no campo inimigo, só elas
+function attackOptions(S,side,uid){const tt=taunts(S,side),units=(tt.length?tt:S.sides[other(side)].field.filter(Boolean)).map(x=>x.uid);return{units,face:canFace(S,side,uid)}}
 function canAttack(S,side,uid){if(S.winner)return{ok:false,reason:'MATCH_OVER'};if(S.active!==side||S.phase!=='plan')return{ok:false,reason:'NOT_ACTIVE'};
  const f=findUnit(S,uid);if(!f||f.side!==side)return{ok:false,reason:'NO_UNIT'};const u=f.unit;
  if(u.sick)return{ok:false,reason:'SICK'};if(u.attacked)return{ok:false,reason:'USED'};if(atkOf(u)<=0)return{ok:false,reason:'NO_ATK'};if(isBlocked(S,u))return{ok:false,reason:'BLOCKED'};return{ok:true}}
 function attack(S,side,uid,target){const v=canAttack(S,side,uid);if(!v.ok)return v;const me=S.sides[side],foe=S.sides[other(side)],u=findUnit(S,uid).unit,i=me.field.indexOf(u);
  let t=null;if(target!=='face'&&target!=null){const tf=findUnit(S,target);if(!tf||tf.side===side)return{ok:false,reason:'BAD_TARGET'};t=tf.unit}
- else if(foe.field[i])return{ok:false,reason:'FACE_BLOCKED'};   // PV só com a coluna da frente vazia
- u.attacked=true;if(u.statuses.some(s=>s.type==='fury')){u.statuses=u.statuses.filter(s=>s.type!=='fury');emit(S,'FURY_END',{side,uid:u.uid})}
+ else if(foe.field[i])return{ok:false,reason:'FACE_BLOCKED'};
+ {const tt=taunts(S,side);if(tt.length&&!tt.includes(t))return{ok:false,reason:'TAUNT'}}   // PV só com a coluna da frente vazia
+ u.atkCount=(u.atkCount||0)+1;u.attacked=!(hasAb(u,'furia_vento')&&u.atkCount<2);if(u.statuses.some(s=>s.type==='fury')){u.statuses=u.statuses.filter(s=>s.type!=='fury');emit(S,'FURY_END',{side,uid:u.uid})}
  if(!t){emit(S,'ATTACK',{side,slot:i,uid:u.uid,target:null,tslot:i});const a=atkOf(u);damagePlayer(S,other(side),a,'attack');if(a>0&&!S.winner)drain(S,u);
   // Devastar (nas colunas ao lado da sua) e Incendiar também valem no ataque direto
   if(!S.winner&&hasAb(u,'devastar')){const dv=kwN(u,'devastar',0),adj=[i-1,i+1].map(k=>foe.field[k]).filter(Boolean);if(dv&&adj.length){emit(S,'ABILITY',{side,uid:u.uid,name:'Devastar '+dv});for(const x of adj)if(foe.field.includes(x))damageUnit(S,x,dv,'devastate')}}
@@ -426,7 +449,9 @@ function playCard(S,side,uid,slot,target,targets){const v=canPlay(S,side,uid,slo
  let pt=null;if(kwE(card.def,'entra_peste')){const ok=pestTargets(S,side);if(targets!=null){if(!Array.isArray(targets)||targets.length>2||new Set(targets).size!==targets.length||!targets.every(t=>ok.includes(t)))return{ok:false,reason:'BAD_TARGET'};pt=targets}else pt=autoPest(S,side)}
  sd.hand.splice(ci,1);sd.pc-=d.cost;emit(S,'PC_SPENT',{side,amount:d.cost,pc:sd.pc});
  sd.field[slot]=mkUnit(S,card,side);emit(S,'CARD_PLAYED',{side,uid:card.uid,def:card.def,slot});
- const nu=sd.field[slot];
+ const nu=sd.field[slot];if(kwE(card.def,'investida'))nu.sick=false;
+ {const e=kwE(card.def,'entra_cura_todos');if(e){emit(S,'ABILITY',{side,uid:nu.uid,name:'Grito de Guerra: Curar '+e.n});
+  for(const x of sd.field)if(x&&x!==nu&&x.hp<x.maxHp){const h0=x.hp;x.hp=Math.min(x.maxHp,x.hp+e.n);emit(S,'UNIT_BUFFED',{uid:x.uid,side,hp:x.hp,heal:x.hp-h0,src:nu.uid,reason:'heal'})}}}
  if(tg!=null){const f=findUnit(S,tg);if(f){
   const tk=tgtKw(card.def),nm=(KW[tk.k].sh||KW[tk.k].txt)(tk);
   if(tk.k==='entra_banir'||tk.k==='dim_bolso'){if(tk.k==='dim_bolso')emit(S,'ABILITY',{side,uid:nu.uid,name:'Dimensão de Bolso',target:tg});sendToPocket(S,f.unit,side,tk.n)}
@@ -479,14 +504,21 @@ function legalActions(S,side){const out=[];if(!S.winner&&S.active===side&&S.phas
  for(const c of sd.hand)for(let s=0;s<RULES.SLOTS;s++){if(!canPlay(S,side,c.uid,s).ok)continue;
   if(TARGETED[c.def]){const ts=targetsFor(S,side,c.def,s);if(ts.length){for(const t of ts)out.push({type:'PLAY',side,uid:c.uid,slot:s,target:t});continue}}
   out.push({type:'PLAY',side,uid:c.uid,slot:s})}
- for(const u of sd.field)if(u&&canAttack(S,side,u.uid).ok){if(!S.sides[other(side)].field[sd.field.indexOf(u)])out.push({type:'ATTACK',side,uid:u.uid,target:'face'});for(const t of S.sides[other(side)].field)if(t)out.push({type:'ATTACK',side,uid:u.uid,target:t.uid})}
+ for(const u of sd.field)if(u&&canAttack(S,side,u.uid).ok){const o=attackOptions(S,side,u.uid);if(o.face)out.push({type:'ATTACK',side,uid:u.uid,target:'face'});for(const t of o.units)out.push({type:'ATTACK',side,uid:u.uid,target:t})}
  if(canProtocol(S,side).ok)out.push({type:'PROTOCOL',side});for(const c of sd.hand)if(c.def==='001'&&!S.scp001.used)out.push({type:'USE_001',side,uid:c.uid});out.push({type:'END_TURN',side});return out}
 
 /* ---------- IA: três perfis, mesmas regras do jogador, sem ver o baralho ---------- */
 // valor das palavras-chave para a IA comum (genérico: nenhuma regra por carta)
 function kwPlayValue(S,side,def,a,opp,profile){const me=S.sides[side],foe=S.sides[other(side)];let v=0;
  for(const e of DEFS[def].kw||[]){const n=e.n||0;
-  if(e.k==='regeneracao')v+=n*1.2+(profile==='defensive'?1:0);
+  if(e.k==='provocar')v+=2.5+(profile==='defensive'?1.5:0);
+  else if(e.k==='investida')v+=DEFS[def].atk*(foe.field.some(Boolean)?.6:1.1);
+  else if(e.k==='escudo')v+=DEFS[def].atk*.8+1;
+  else if(e.k==='venenoso')v+=3+foe.field.filter(Boolean).length*.6;
+  else if(e.k==='furia_vento')v+=DEFS[def].atk*.9;
+  else if(e.k==='us_dano')v+=n*1.2;
+  else if(e.k==='entra_cura_todos'){for(const x of me.field)if(x)v+=Math.min(n,x.maxHp-x.hp)*.8}
+  else if(e.k==='regeneracao')v+=n*1.2+(profile==='defensive'?1:0);
   else if(e.k==='protecao')v+=n*2+(profile==='defensive'?1:0);
   else if(e.k==='cura'){let m=0;for(const x of me.field)if(x)m=Math.max(m,Math.min(n,x.maxHp-x.hp));v+=m*1.1}
   else if(e.k==='reforco')v+=me.field.some(Boolean)?n*1.6:0;
@@ -526,5 +558,5 @@ function aiChoose(S,side){if(S.phase==='scry'&&S.scryOffer&&S.active===side){con
  for(const a of acts){const sc=aiScore(S,side,a,profile);if(sc>bs){bs=sc;best=a}}
  return best&&bs>0?best:{type:'END_TURN',side}}
 
-return{canFace,canAttack,EXCLUSIVE,CLASS_KW,atkOf,RARITY,COLLECTIBLE,TARGETED,targetsFor,autoTarget,silenced,handCount,previewCombat,attackTarget,RULES,DEFS,GLOSS,KW,DECK_TEST,pestTargets,autoPest,hasAb,create,start,dispatch,legalActions,canPlay,canProtocol,corrosionTargets,aiChoose,aiScore,snap,findUnit,isBlocked,other}
+return{KWDESC:Object.fromEntries(Object.entries(KWD).map(([k,v])=>[k,v[1]])),canFace,attackOptions,canAttack,kwE,EXCLUSIVE,CLASS_KW,atkOf,RARITY,COLLECTIBLE,TARGETED,targetsFor,autoTarget,silenced,handCount,previewCombat,attackTarget,RULES,DEFS,GLOSS,KW,DECK_TEST,pestTargets,autoPest,hasAb,create,start,dispatch,legalActions,canPlay,canProtocol,corrosionTargets,aiChoose,aiScore,snap,findUnit,isBlocked,other}
 });

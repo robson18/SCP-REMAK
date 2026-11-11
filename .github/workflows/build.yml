@@ -21,8 +21,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Testes das habilidades
+        run: node tools/rules.test.js
       - name: Conferir o motor de regras (partida IA x IA)
         run: |
+          global.localStorage={getItem(){return null},setItem(){}};
           node -e "
           const E=require('./js/engine.js');global.CombatEngine=E;global.window={};require('./js/cards.js');
           for(let g=0;g<50;g++){const S=E.create({seed:g+1,decks:{p:window.CARDS.DECK,e:window.CARDS.DECK}});E.start(S);

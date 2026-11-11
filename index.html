@@ -19,15 +19,29 @@
   <div id="cards"></div>
   <svg id="arrow"><defs><marker id="ah" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#ff9a2e"/></marker></defs><path d="" marker-end="url(#ah)"/></svg>
   <button id="end" class="btn">ENCERRAR<br>TURNO</button>
+  <button id="menubtn" class="btn">☰ MENU</button>
   <button id="proto" class="btn small">PROTOCOLO DE<br>EMERGÊNCIA</button>
   <div id="preview"></div>
   <div id="fx"></div>
   <div id="banner"></div>
   <div id="toast"></div>
   <div id="modal"></div>
+  <div id="menu" class="on">
+    <img src="assets/menu.webp" alt="">
+    <div class="monster"></div><div class="lamp"></div>
+    <div class="steam" style="left:1395px;top:540px"></div><div class="steam" style="left:1415px;top:548px;animation-delay:1.1s"></div><div class="steam" style="left:1405px;top:545px;animation-delay:2.2s"></div>
+    <div class="mb main" data-go="play" style="left:112px;top:327px;width:515px;height:86px"></div>
+    <div class="mb" data-go="deck" style="left:134px;top:428px;width:456px;height:65px"></div>
+    <div class="mb" data-go="enc" style="left:134px;top:508px;width:456px;height:65px"></div>
+    <div class="mb" data-go="cfg" style="left:134px;top:588px;width:456px;height:65px"></div>
+    <div class="mb" data-go="cred" style="left:134px;top:668px;width:456px;height:65px"></div>
+    <div class="mb" data-go="quit" style="left:134px;top:748px;width:456px;height:65px"></div>
+  </div>
+  <div id="panel"></div>
 </div></div>
 <script src="js/engine.js"></script>
 <script src="js/cards.js"></script>
 <script src="js/duel.js"></script>
+<script src="js/menu.js"></script>
 </body>
 </html>

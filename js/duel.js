@@ -3,8 +3,9 @@
 const E=CombatEngine,C=CARDS,D=E.DEFS,R=E.RULES;
 const $=s=>document.querySelector(s);
 const stage=$('#stage'),cardsEl=$('#cards'),fx=$('#fx'),arrow=$('#arrow path');
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
-let S,view,queue=[],busy=false,mode=null,drag=null,hover=null,endArmed=0;
+const wait=ms=>new Promise(r=>setTimeout(r,ms*SPEED()));
+let S,view,queue=[],busy=false,mode=null,drag=null,hover=null,endArmed=0,gid=0;
+const SPEED=()=>(window.SETTINGS&&SETTINGS.speed==='fast')?.5:1;
 const els=new Map();
 
 /* ---------- escala da mesa ---------- */
@@ -32,14 +33,18 @@ for(const s of['e','p']){const im=$('#deck-'+s);im.style.left=DECK[s].cx-60+'px'
  const n=$('#deckn-'+s);n.style.left=DECK[s].cx-60+'px';n.style.top=DECK[s].cy+70+'px'}
 
 /* ---------- desenho da carta ---------- */
+const SWORD='<svg viewBox="0 0 40 40"><defs><linearGradient id="bl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#d6d0c6"/><stop offset="1" stop-color="#8a847b"/></linearGradient></defs><g stroke="#140f0b" stroke-width="1.8" stroke-linejoin="round"><path d="M30 3 L37 3 L37 10 L19 28 L12 21 Z" fill="url(#bl)"/><path d="M8 18 L22 32 L19 35 L5 21 Z" fill="#d2a865"/><path d="M14 29 L8.5 34.5" stroke="#5a3a1e" stroke-width="5" stroke-linecap="round"/><circle cx="6.5" cy="36" r="3" fill="#d2a865"/></g></svg>';
+const HEART='<svg viewBox="0 0 40 40"><defs><radialGradient id="hr" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ff8a80"/><stop offset=".45" stop-color="#e3201b"/><stop offset="1" stop-color="#7a0606"/></radialGradient></defs><path d="M20 35 C 8 26 3 20 3 13 C 3 7.5 7.5 4 12 4 C 15.5 4 18.5 6 20 9 C 21.5 6 24.5 4 28 4 C 32.5 4 37 7.5 37 13 C 37 20 32 26 20 35 Z" fill="url(#hr)" stroke="#2a0505" stroke-width="1.8"/><ellipse cx="12" cy="11" rx="4" ry="2.6" fill="#fff" opacity=".45" transform="rotate(-30 12 11)"/></svg>';
 function cardHTML(def,u){const d=D[def];let h='';
- if(C.FULL[def])h+=`<img class="full" src="${C.A(`assets/card_${def}.webp`)}" alt="">`;
+ if(C.FULL[def])h+=`<img class="full" src="${C.artOf(def)}" alt="">`;
  else h+=`<img class="art" src="${C.artOf(def)}" alt=""><img class="frame" src="${C.A('assets/frame.webp')}" alt=""><div class="name">${d.name}</div><div class="nick">${d.nick}</div>`;
- const pc=S.sides.p.pc;h+=`<div class="cost${!u&&d.cost>pc?' no':''}">${d.cost}</div>`;
+ const pc=S?S.sides.p.pc:99;h+=`<div class="cost${!u&&d.cost>pc?' no':''}">${d.cost}</div>`;
  const lines=C.TEXT[def]||[];
  h+=`<div class="text">${lines.map(x=>`<div><b>${x.n}</b>${x.t?' — '+x.t:''}</div>`).join('')}<div class="cls">${C.CLS[d.cls]||''}</div></div>`;
  const atk=u?u.atk:d.atk,hp=u?u.hp:d.hp,mx=u?u.maxHp:d.hp;
- h+=`<div class="atk ${atk>d.atk?'up':atk<d.atk?'down':''}">${atk}</div><div class="hp ${hp<mx?'down':mx>d.hp?'up':''}">${hp}</div>`;
+ h+=`<div class="atk"><i>${SWORD}</i><span class="${atk>d.atk?'up':atk<d.atk?'down':''}">${atk}</span></div><div class="hp"><i>${HEART}</i><span class="${hp<mx?'down':mx>d.hp?'up':''}">${hp}</span></div>`;
+ if(u&&u.shield)h+='<div class="bubble"></div>';
+ if(u&&E.hasAb(u,'provocar'))h+='<div class="taunt"></div>';
  if(u&&u.statuses.length){const m={poison:x=>'☠ Veneno '+x.n,weak:x=>'▼ Enfraquecido',silence:()=>'✕ Silenciado',fury:()=>'Fúria',graffiti:()=>'Grafite',plague:()=>'Peste',uncontrolled:()=>'Ruptura'};
   h+=`<div class="st">${[...new Set(u.statuses.map(x=>(m[x.type]||(()=>x.type))(x)))].map(t=>`<span>${t}</span>`).join('')}</div>`}
  return h}
@@ -59,18 +64,18 @@ function render(){if(!view)return;const seen=new Set(),act=canAct();
    if(s==='p'&&act&&D[c.def].cost<=S.sides.p.pc&&S.sides.p.field.some(x=>!x))el.classList.add('playable');
    if(mode&&mode.uid===c.uid)el.classList.add('sel')});
   sd.field.forEach((u,i)=>{if(!u)return;seen.add(u.uid);const el=getEl(u.uid,DECK[s]);el.dataset.loc='field';el.dataset.side=s;el.dataset.def=u.def;
-   setFace(el,JSON.stringify([u.def,u.atk,u.hp,u.maxHp,u.statuses]),cardHTML(u.def,u));
+   setFace(el,JSON.stringify([u.def,u.atk,u.hp,u.maxHp,u.statuses,u.shield]),cardHTML(u.def,u));
    place(el,{cx:SX(i),cy:ROW[s],rot:0,s:1,z:10});
    el.className='card field';
    if(u.sick&&s==='p'&&view.active==='p')el.classList.add('sick');
    if(s==='p'&&act&&!mode&&E.canAttack(S,'p',u.uid).ok)el.classList.add('ready');
    if(mode&&mode.uid===u.uid)el.classList.add('sel');
-   if(mode&&mode.type==='attack'&&s==='e')el.classList.add('target');
+   if(mode&&mode.type==='attack'&&s==='e'&&E.attackOptions(S,'p',mode.uid).units.includes(u.uid))el.classList.add('target');
    if(mode&&mode.type==='target'&&mode.ts.includes(u.uid))el.classList.add('target')})}
  for(const[uid,el]of els)if(!seen.has(uid)){els.delete(uid);
   if(el.dataset.loc==='field'){el.classList.add('dying');setTimeout(()=>el.remove(),550)}else el.remove()}
  for(const s of['p','e']){const sd=view.sides[s];$('#deckn-'+s).textContent=sd.deckN;$('#deck-'+s).style.opacity=sd.deckN?1:.25;
-  const h=$('#hud-'+s);h.className='hud'+(view.active===s?' active':'')+(s==='e'&&mode&&mode.type==='attack'&&E.canFace(S,'p',mode.uid)?' target':'');
+  const h=$('#hud-'+s);h.className='hud'+(view.active===s?' active':'')+(s==='e'&&mode&&mode.type==='attack'&&E.attackOptions(S,'p',mode.uid).face?' target':'');
   h.innerHTML=`<div class="who">${s==='p'?'VOCÊ · DIRETOR':'INIMIGO'}</div><div class="hpv"><i>♥</i>${sd.hp}</div>
    <div class="lbl">PC ${sd.pc}/${sd.pcMax}</div><div class="pcs">${Array.from({length:R.PC_CAP},(_,i)=>`<b class="${i<sd.pc?'on':''}" style="${i>=sd.pcMax?'opacity:.25':''}"></b>`).join('')}</div>
    <div class="lbl">RISCO DE RUPTURA ${sd.rr}/${R.RR_MAX}</div><div class="rr"><div style="width:${sd.rr/R.RR_MAX*100}%"></div></div>
@@ -102,6 +107,7 @@ async function playEv(ev){if(ev.snap){view=ev.snap;render()}
   case'PLAYER_DAMAGED':float(HUD[ev.side],'-'+ev.amount,'dmg');shake($('#hud-'+ev.side));await wait(450);break;
   case'UNIT_BUFFED':{const p=posOf(ev.uid);if(p&&ev.heal)float(p,'+'+ev.heal,'heal');await wait(300);break}
   case'UNIT_DESTROYED':await wait(480);break;
+  case'SHIELD_BROKEN':{const p=posOf(ev.uid);if(p){float(p,'Escudo!','info');boom(p)}await wait(450);break}
   case'UNIT_PROTECTED':{const p=posOf(ev.uid);if(p)float(p,'Sobreviveu!','info');await wait(600);break}
   case'ABILITY':{const p=posOf(ev.uid)||HUD[ev.side];float({cx:p.cx,cy:p.cy-60},ev.name,'info');await wait(650);break}
   case'BREACH_TRIGGERED':case'BREACH_GENERIC':banner('RUPTURA DE CONTENÇÃO',true,1500);await wait(1400);break;
@@ -113,15 +119,15 @@ async function playEv(ev){if(ev.snap){view=ev.snap;render()}
   case'MATCH_FINISHED':await wait(400);endModal(ev.winner);break;
  }}
 function push(evs){queue.push(...evs);if(!busy)pump()}
-async function pump(){busy=true;render();while(queue.length)await playEv(queue.shift());busy=false;view=E.snap(S);render();afterQueue()}
+async function pump(){const g=gid;busy=true;render();while(queue.length){await playEv(queue.shift());if(g!==gid)return}busy=false;view=E.snap(S);render();afterQueue()}
 function afterQueue(){if(S.winner)return;
  if(S.phase==='scry'&&S.scryOffer){if(S.scryOffer.side==='p')scryModal();else setTimeout(aiStep,500);return}
  if(S.active==='e')setTimeout(aiStep,550)}
-function aiStep(){if(busy||S.winner||S.active!=='e')return;let r=E.dispatch(S,E.aiChoose(S,'e'));if(!r.ok)r=E.dispatch(S,{type:'END_TURN',side:'e'});push(r.events)}
+function aiStep(){if(!S||busy||S.winner||S.active!=='e')return;let r=E.dispatch(S,E.aiChoose(S,'e'));if(!r.ok)r=E.dispatch(S,{type:'END_TURN',side:'e'});push(r.events)}
 
 /* ---------- ações do jogador ---------- */
 const WHY={PC_LOW:'PC insuficiente.',SLOT_OCCUPIED:'Coluna ocupada.',SICK:'Acabou de entrar: só ataca no próximo turno.',USED:'Esta carta já atacou neste turno.',
- FACE_BLOCKED:'Só dá para atacar o inimigo direto com a coluna da frente vazia.',NO_ATK:'Esta carta não tem ataque.',BLOCKED:'Esta carta não pode atacar neste turno.',RR_ZERO:'Risco de Ruptura já está em 0.',BAD_TARGET:'Alvo inválido.'};
+ FACE_BLOCKED:'Só dá para atacar o inimigo direto com a coluna da frente vazia.',NO_ATK:'Esta carta não tem ataque.',BLOCKED:'Esta carta não pode atacar neste turno.',RR_ZERO:'Risco de Ruptura já está em 0.',BAD_TARGET:'Alvo inválido.',TAUNT:'Há uma carta com Provocar: ataque ela primeiro.'};
 const canAct=()=>S&&!busy&&!S.winner&&S.active==='p'&&S.phase==='plan';
 function act(a){if(!canAct())return;mode=null;arrowOff();const r=E.dispatch(S,Object.assign({side:'p'},a));
  if(!r.ok){toast(WHY[r.reason]||r.reason);render();return}push(r.events)}
@@ -173,11 +179,13 @@ $('#proto').title=`Gasta ${R.EM_COST} PC e reduz o Risco de Ruptura em ${R.EM_RR
 /* ---------- janelas ---------- */
 function scryModal(){const m=$('#modal');m.innerHTML=`<h2>ESCOLHA UMA CARTA</h2><p>A outra volta para o fundo do baralho.</p><div class="row">${S.scryOffer.cards.map(c=>`<div class="card" data-pick="${c.uid}">${cardHTML(c.def,null)}</div>`).join('')}</div>`;
  m.classList.add('on');m.querySelectorAll('[data-pick]').forEach(d=>d.onclick=()=>{m.classList.remove('on');const r=E.dispatch(S,{type:'SCRY',side:'p',uid:+d.dataset.pick});push(r.events)})}
-function endModal(w){const m=$('#modal');m.innerHTML=`<h2>${w==='p'?'CONTENÇÃO BEM-SUCEDIDA':'FALHA DE CONTENÇÃO'}</h2><p>${w==='p'?'Você venceu o duelo.':'O inimigo venceu o duelo.'}</p><button class="btn">JOGAR DE NOVO</button>`;
- m.classList.add('on');m.querySelector('button').onclick=()=>{m.classList.remove('on');newGame()}}
+function endModal(w){const m=$('#modal');m.innerHTML=`<h2>${w==='p'?'CONTENÇÃO BEM-SUCEDIDA':'FALHA DE CONTENÇÃO'}</h2><p>${w==='p'?'Você venceu o duelo.':'O inimigo venceu o duelo.'}</p><div class="row"><button class="btn" id="again">JOGAR DE NOVO</button><button class="btn" id="tomenu">MENU</button></div>`;
+ m.classList.add('on');$('#again').onclick=()=>{m.classList.remove('on');newGame()};$('#tomenu').onclick=()=>{m.classList.remove('on');leave()}}
 
-function newGame(){for(const el of els.values())el.remove();els.clear();queue=[];mode=null;drag=null;
- S=E.create({seed:(Math.random()*1e9)|0,decks:{p:C.DECK,e:C.DECK},first:Math.random()<.5?'p':'e'});view=E.snap(S);render();push(E.start(S))}
-window.DUEL={get S(){return S},act,newGame};
-newGame();
+function clear(){gid++;for(const el of els.values())el.remove();els.clear();fx.innerHTML='';queue=[];mode=null;drag=null;busy=false;arrowOff();showPreview(null)}
+function newGame(){clear();const st=window.SETTINGS&&SETTINGS.first,first=st==='p'||st==='e'?st:Math.random()<.5?'p':'e';
+ S=E.create({seed:(Math.random()*1e9)|0,decks:{p:C.loadDeck(),e:C.DECK},first});view=E.snap(S);render();push(E.start(S))}
+function leave(){clear();S=null;view=null;$('#modal').classList.remove('on');window.MENU&&MENU.show()}
+$('#menubtn').onclick=()=>{if(S&&!S.winner&&!confirm('Abandonar o duelo e voltar ao menu?'))return;leave()};
+window.DUEL={get S(){return S},act,newGame,leave,cardHTML};
 })();

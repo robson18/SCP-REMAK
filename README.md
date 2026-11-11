@@ -3,7 +3,7 @@
 Jogo de cartas da Fundação SCP com gráficos novos. As regras são as mesmas do SCP Card Game original
 (`js/engine.js` é o mesmo motor de combate).
 
-Nesta primeira etapa só existe a **mesa de duelo** contra a IA.
+Tem o **menu inicial** (Iniciar Jogo, Baralho, Enciclopédia, Configurações, Créditos, Sair) e a **mesa de duelo** contra a IA.
 
 ## Como jogar
 
@@ -23,17 +23,29 @@ Abra `index.html` no navegador (não precisa de build).
 | `js/engine.js` | Motor de regras (cópia do jogo original) |
 | `js/cards.js` | Ajustes das cartas com arte nova, textos e baralho |
 | `js/duel.js` | Desenho da mesa, animações, controles e IA |
+| `js/menu.js` | Menu inicial, montagem de baralho, enciclopédia, configurações e créditos |
 | `assets/src/` | Artes originais enviadas (carta, verso/baralho, mesa) |
 | `tools/prep_assets.py` | Recorta as artes e apaga os números impressos (o jogo escreve ATQ/Vida por cima) |
 
 ## Cartas com arte nova
 
-| Carta | Custo | ATQ / Vida | Habilidades |
-|---|---|---|---|
-| SCP-682 — O Lagarto Imortal | 9 | 12 / 16 | **Imortal** (na primeira vez que seria destruído, fica com 1 de Vida) · **Drenar 3** |
-| SCP-3812 — Uma Voz Atrás de Mim | 10 | 9 / 13 | **Colapso de Realidade** (após 3 turnos em campo, destrói todas as cartas inimigas) |
+Os símbolos de ATQ (espada) e Vida (coração) são apagados da arte por `tools/prep_assets.py` e desenhados pelo jogo,
+iguais em todas as cartas. A cor da moldura indica a classe: verde = Seguro, prata = Euclid, vermelho = Keter.
 
-As outras cartas usam a arte do jogo antigo dentro da moldura nova até receberem arte própria.
+| Carta | Classe | Custo | ATQ / Vida | Habilidades (inspiradas no Hearthstone) |
+|---|---|---|---|---|
+| SCP-127 — A Arma Viva | Seguro | 3 | 3 / 4 | **Investida** |
+| SCP-074 — O Tatuzinho Quântico | Euclid | 3 | 2 / 7 | **Provocar** |
+| SCP-075 — O Caracol Corrosivo | Euclid | 4 | 3 / 5 | **Venenoso** |
+| SCP-054 — A Ninfa de Água | Seguro | 5 | 3 / 6 | **Escudo Divino** · **Grito de Guerra:** cura 3 de todos os aliados |
+| SCP-682 — O Lagarto Imortal | Keter | 9 | 12 / 16 | **Imortal** · **Drenar 3** |
+| SCP-3812 — Uma Voz Atrás de Mim | Keter | 10 | 9 / 13 | **Colapso de Realidade** · **Último Suspiro:** 3 de dano a todos os inimigos |
+
+Palavras-chave novas no motor: Provocar, Investida, Escudo Divino, Venenoso, Fúria dos Ventos, Grito de Guerra, Último Suspiro
+(testes em `node tools/rules.test.js`). As outras cartas usam a arte do jogo antigo dentro da moldura nova até receberem arte própria.
+
+Para adicionar uma carta com arte nova: salve a imagem como `assets/src/card_<número>.webp`, rode
+`python3 tools/prep_assets.py <pasta assets do jogo antigo>` e configure a carta em `NEW` e `FULL` (`js/cards.js`).
 
 ## Licença
 
