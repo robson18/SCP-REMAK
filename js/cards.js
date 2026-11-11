@@ -14,8 +14,9 @@ const DRAIN=n=>`Ao causar dano em combate, recupera ${n} de Vida.`;
 for(const k of['682','3812'])TEXT[k]=D[k].kw.map(e=>EXTRA[e.k]?{n:EXTRA[e.k][0],t:EXTRA[e.k][1]}:e.k==='drenar'?{n:'Drenar',t:DRAIN(e.n)}:{n:E.KW[e.k].txt(e),t:''});
 
 const FULL={'682':1,'3812':1}; // artes completas (moldura inclusa)
-const artOf=def=>{const b=def==='T074'?'074':def==='T088'?'088':def;return FULL[b]?null:`assets/art/card_${b}.webp`};
+const A=p=>(window.ASSETS&&window.ASSETS[p])||p; // no build, as imagens vêm embutidas
+const artOf=def=>{const b=def==='T074'?'074':def==='T088'?'088':def;return FULL[b]?null:A(`assets/art/card_${b}.webp`)};
 const CLS={safe:'Seguro',euclid:'Euclid',keter:'Keter',token:'Ficha',unique:'Único'};
 const DECK=['127','127','007','007','106','074','074','043','043','049','049','682','3812','3008','3008','096','054','138','088','075'];
-window.CARDS={TEXT,FULL,artOf,CLS,DECK};
+window.CARDS={A,TEXT,FULL,artOf,CLS,DECK};
 })(CombatEngine);

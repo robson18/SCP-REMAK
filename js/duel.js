@@ -33,8 +33,8 @@ for(const s of['e','p']){const im=$('#deck-'+s);im.style.left=DECK[s].cx-60+'px'
 
 /* ---------- desenho da carta ---------- */
 function cardHTML(def,u){const d=D[def];let h='';
- if(C.FULL[def])h+=`<img class="full" src="assets/card_${def}.webp" alt="">`;
- else h+=`<img class="art" src="${C.artOf(def)}" alt=""><img class="frame" src="assets/frame.webp" alt=""><div class="name">${d.name}</div><div class="nick">${d.nick}</div>`;
+ if(C.FULL[def])h+=`<img class="full" src="${C.A(`assets/card_${def}.webp`)}" alt="">`;
+ else h+=`<img class="art" src="${C.artOf(def)}" alt=""><img class="frame" src="${C.A('assets/frame.webp')}" alt=""><div class="name">${d.name}</div><div class="nick">${d.nick}</div>`;
  const pc=S.sides.p.pc;h+=`<div class="cost${!u&&d.cost>pc?' no':''}">${d.cost}</div>`;
  const lines=C.TEXT[def]||[];
  h+=`<div class="text">${lines.map(x=>`<div><b>${x.n}</b>${x.t?' — '+x.t:''}</div>`).join('')}<div class="cls">${C.CLS[d.cls]||''}</div></div>`;
@@ -43,7 +43,7 @@ function cardHTML(def,u){const d=D[def];let h='';
  if(u&&u.statuses.length){const m={poison:x=>'☠ Veneno '+x.n,weak:x=>'▼ Enfraquecido',silence:()=>'✕ Silenciado',fury:()=>'Fúria',graffiti:()=>'Grafite',plague:()=>'Peste',uncontrolled:()=>'Ruptura'};
   h+=`<div class="st">${[...new Set(u.statuses.map(x=>(m[x.type]||(()=>x.type))(x)))].map(t=>`<span>${t}</span>`).join('')}</div>`}
  return h}
-const backHTML='<img class="back" src="assets/back.webp" alt="">';
+const backHTML=`<img class="back" src="${C.A('assets/back.webp')}" alt="">`;
 
 /* ---------- render do estado ---------- */
 function getEl(uid,from){let el=els.get(uid);if(el)return el;

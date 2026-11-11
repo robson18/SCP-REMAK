@@ -38,3 +38,13 @@ As outras cartas usam a arte do jogo antigo dentro da moldura nova até recebere
 ## Licença
 
 Conteúdo da Fundação SCP sob CC BY-SA 3.0 (scp-wiki.wikidot.com).
+
+## Versão jogável (Release)
+
+A cada envio para a `main`, o GitHub Actions monta o jogo e publica na Release **Versão de teste** (aba Releases):
+
+- `scp_remake.html`: arquivo único, abra no navegador.
+- `SCP_Remake_Windows.zip`: executável para Windows.
+- `SCP_Remake_Android.apk`: aplicativo Android.
+
+Para montar o HTML localmente: `python3 tools/build.py`.

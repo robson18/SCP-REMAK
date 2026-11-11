@@ -1,0 +1,59 @@
+# A cada envio para a main: monta o jogo (navegador), o executável para Windows e o aplicativo Android (APK)
+# e publica tudo na Release "Versão de teste" (aba Releases do repositório).
+name: Montar o jogo
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Conferir o motor de regras (partida IA x IA)
+        run: |
+          node -e "
+          const E=require('./js/engine.js');global.CombatEngine=E;global.window={};require('./js/cards.js');
+          for(let g=0;g<50;g++){const S=E.create({seed:g+1,decks:{p:window.CARDS.DECK,e:window.CARDS.DECK}});E.start(S);
+           let n=0;while(!S.winner&&n++<3000){const r=E.dispatch(S,E.aiChoose(S,S.active));if(!r.ok)E.dispatch(S,{type:'END_TURN',side:S.active})}
+           if(!S.winner)throw new Error('partida '+g+' não terminou')}
+          console.log('50 partidas ok')"
+      - name: Montar o jogo (navegador)
+        run: python3 tools/build.py
+      - name: Montar o executável (Windows)
+        run: |
+          mkdir -p desktop/game
+          cp scp_remake.html desktop/game/index.html
+          cd desktop
+          npm i -D --no-audit --no-fund @electron/packager@18.3.6
+          npx electron-packager . "SCP Remake" --platform=win32 --arch=x64 --electron-version=33.4.11 --out=dist --overwrite --icon=icon.ico --ignore="^/dist" --ignore="node_modules" --ignore="icon.ico"
+          cd dist && zip -qry -9 ../../SCP_Remake_Windows.zip "SCP Remake-win32-x64"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Montar o aplicativo Android (APK)
+        run: bash android/build_apk.sh
+      - name: Atualizar a Release "Versão de teste"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete versao-de-teste --yes --cleanup-tag || true
+          gh release create versao-de-teste scp_remake.html SCP_Remake_Windows.zip SCP_Remake_Android.apk \
+            --target "$GITHUB_SHA" --title "Versão de teste (build ${{ github.run_number }})" --latest \
+            --notes "Montada automaticamente a partir do commit ${GITHUB_SHA::7}.
+
+          - **scp_remake.html**: abra no navegador.
+          - **SCP_Remake_Windows.zip**: descompacte e abra *SCP Remake.exe* (na primeira vez: Mais informações → Executar assim mesmo).
+          - **SCP_Remake_Android.apk**: baixe no celular e toque para instalar (permita instalar apps de fontes desconhecidas)."

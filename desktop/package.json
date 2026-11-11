@@ -1,0 +1,9 @@
+{
+  "name": "scp-remake",
+  "productName": "SCP Remake",
+  "version": "0.1.0",
+  "description": "SCP Remake",
+  "main": "main.js",
+  "author": "SCP Remake",
+  "license": "CC-BY-SA-3.0"
+}

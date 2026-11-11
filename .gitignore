@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+desktop/game/
+desktop/dist/
+app/
+scp_remake.html
+*.zip
+*.apk
